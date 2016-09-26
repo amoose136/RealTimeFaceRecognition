@@ -89,5 +89,5 @@ Prediction of User Face
   ![alt text](https://raw.githubusercontent.com/AlexOuyang/RealTimeFaceRecognition/master/screenshots/face_sad.png "Prediction of User Face")
 
 
-Author: Amos Manneschmidt
+Author: Amos Manneschmidt <amos@utk.edu>
 Face Tracking Author: Alex Chenxing Ouyang <c2ouyang@ucsd.edu>
