@@ -1,16 +1,21 @@
 """ 
 ====================================================
-    Faces recognition and detection using OpenCV 
+        Real Time Heart Rate Detector 
 ====================================================
 
-The dataset used is the Extended Yale Database B Cropped
+The Haar cascade dataset used is the Extended Yale Database B Cropped
 
   http://vision.ucsd.edu/~leekc/ExtYaleDatabase/ExtYaleB.html
 
 
 Summary:
-        Real time facial tracking and recognition using harrcascade 
-        and SVM
+    This utility overlays the heart rate extracted from input video.
+    Order of operations:
+        -> Run real time facial tracking and recognition using Haar cascades
+        and SVM 
+        -> Integrate cropped faces over red channel to produce 1d scalar 
+        -> FFT 1d red brightness scalar for sets of 30 frames
+        -> Find peak of FFT within range of expected heart rates
 
 To Run:
     * To run it without options
@@ -30,7 +35,10 @@ Usage:
 
 
         
-Auther: Chenxing Ouyang <c2ouyang@ucsd.edu>
+Adapted from code by Chenxing Ouyang <c2ouyang@ucsd.edu>
+Chenxing's code does the face detection python implementation and provided the Haar cascade database
+
+Written by Amos Manneschmidt
 
 """
 
@@ -45,7 +53,7 @@ import svm
 import sys
 import logging
 import warnings
-
+from pdb import set_trace as br
 
 print(__doc__)
 
@@ -67,10 +75,10 @@ clf, pca = svm.build_SVC(face_profile_data, face_profile_name_index, FACE_DIM)
 # Facial Recognition In Live Tracking
 
 
-DISPLAY_FACE_DIM = (200, 200) # the displayed video stream screen dimention 
+DISPLAY_FACE_DIM = (500, 500) # the displayed video stream screen dimention 
 SKIP_FRAME = 2      # the fixed skip frame
 frame_skip_rate = 0 # skip SKIP_FRAME frames every other frame
-SCALE_FACTOR = 4 # used to resize the captured frame for face detection for faster processing speed
+SCALE_FACTOR = 2 # used to resize the captured frame for face detection for faster processing speed
 face_cascade = cv2.CascadeClassifier("../classifier/haarcascade_frontalface_default.xml") #create a cascade classifier
 sideFace_cascade = cv2.CascadeClassifier('../classifier/haarcascade_profileface.xml')
 
@@ -128,7 +136,7 @@ while ret:
                 scaleFactor=1.3,
                 minNeighbors=5,
                 minSize=(30, 30),
-                flags=cv2.cv.CV_HAAR_SCALE_IMAGE
+                flags=cv2.CASCADE_SCALE_IMAGE
             ) 
 
             # If frontal face detector failed, use profileface detector
@@ -137,7 +145,7 @@ while ret:
                 scaleFactor=1.3,
                 minNeighbors=5,
                 minSize=(30, 30),
-                flags=cv2.cv.CV_HAAR_SCALE_IMAGE
+                flags=cv2.CASCADE_SCALE_IMAGE
             )
 
             # for f in faces:
@@ -155,11 +163,9 @@ while ret:
                     # Name Prediction
                     face_to_predict = cv2.resize(cropped_face, FACE_DIM, interpolation = cv2.INTER_AREA)
                     face_to_predict = cv2.cvtColor(face_to_predict, cv2.COLOR_BGR2GRAY)
-                    name_to_display = svm.predict(clf, pca, face_to_predict, face_profile_names)
 
                     # Display frame
                     cv2.rectangle(rotated_frame, (x,y), (x+w,y+h), (0,255,0))
-                    cv2.putText(rotated_frame, name_to_display, (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,255,0))
 
                 # rotate the frame back and trim the black paddings
                 processed_frame = ut.trim(ut.rotate_image(rotated_frame, rotation * (-1)), frame_scale)
@@ -188,11 +194,10 @@ while ret:
   
     cv2.putText(processed_frame, "Press ESC or 'q' to quit.", (5, 15),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
-
     cv2.imshow("Real Time Facial Recognition", processed_frame)
 
 
-
+    # br()
     if len(cropped_face):
         cv2.imshow("Cropped Face", cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY))
         # face_to_predict = cv2.resize(cropped_face, FACE_DIM, interpolation = cv2.INTER_AREA)
@@ -204,5 +209,3 @@ while ret:
 
 webcam.release()
 cv2.destroyAllWindows()
-
-
