@@ -1,6 +1,6 @@
 """ 
 ====================================================
-        Real Time Heart Rate Detector 
+		Real Time Heart Rate Detector 
 ====================================================
 
 The Haar cascade dataset used is the Extended Yale Database B Cropped
@@ -9,32 +9,32 @@ The Haar cascade dataset used is the Extended Yale Database B Cropped
 
 
 Summary:
-    This utility overlays the heart rate extracted from input video.
-    Order of operations:
-        -> Run real time facial tracking and recognition using Haar cascades
-        and SVM 
-        -> Integrate cropped faces over red channel to produce 1d scalar 
-        -> FFT 1d red brightness scalar for sets of 30 frames
-        -> Find peak of FFT within range of expected heart rates
+	This utility overlays the heart rate extracted from input video.
+	Order of operations:
+		-> Run real time facial tracking and recognition using Haar cascades
+		and SVM 
+		-> Integrate cropped faces over red channel to produce 1d scalar 
+		-> FFT 1d red brightness scalar for sets of 30 frames
+		-> Find peak of FFT within range of expected heart rates
 
 To Run:
-    * To run it without options
-        python main.py
+	* To run it without options
+		python main.py
 
-    * Or running with options (By default, scale_multiplier = 4):
+	* Or running with options (By default, scale_multiplier = 4):
 
-        python main.py [scale_multiplier=<full screensize divided by scale_multiplier>]
+		python main.py [scale_multiplier=<full screensize divided by scale_multiplier>]
 
-    * Say you want to run with 1/2 of the full sreen size, specify that scale_multiplier = 4:
+	* Say you want to run with 1/2 of the full sreen size, specify that scale_multiplier = 4:
 
-        python main.py 4
+		python main.py 4
 
 
 Usage: 
-        press 'q' or 'ESC' to quit the application
+		press 'q' or 'ESC' to quit the application
 
 
-        
+		
 Adapted from code by Chenxing Ouyang <c2ouyang@ucsd.edu>
 Chenxing's code does the face detection python implementation and provided the Haar cascade database
 
@@ -48,6 +48,8 @@ import numpy as np
 from scipy import ndimage
 from time import time
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib.lines import Line2D
 import utils as ut
 import svm
 import sys
@@ -56,12 +58,28 @@ import warnings
 from pdb import set_trace as br
 
 print(__doc__)
-
 ###############################################################################
 # Building SVC from database
+integrated_red=np.arange((150))
+integrated_blue=integrated_red
+integrated_green=integrated_red
+#ani.save('test_sub.mp4')
+plt.ion()
+
+x = np.linspace(0, 1, 150)
+y=integrated_red
+# You probably won't need this if you're embedding things in a tkinter plot...
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+line1, = ax.plot(x, y, 'r-')
+line2, = ax.plot(x, y, 'b-')
+line3, = ax.plot(x, y, 'g-')# Returns a tuple of line objects, thus the comma
+# for phase in np.linspace(0, 10*np.pi, 500):
+	# line1.set_ydata(np.sin(x + phase))
+fig.canvas.draw()
 
 FACE_DIM = (50,50) # h = 50, w = 50
-
 # Load training data from face_profiles/
 face_profile_data, face_profile_name_index, face_profile_names  = ut.load_training_data("../face_profiles/")
 
@@ -73,31 +91,30 @@ clf, pca = svm.build_SVC(face_profile_data, face_profile_name_index, FACE_DIM)
 
 ###############################################################################
 # Facial Recognition In Live Tracking
-
-
-DISPLAY_FACE_DIM = (500, 500) # the displayed video stream screen dimention 
-SKIP_FRAME = 2      # the fixed skip frame
+DISPLAY_FACE_DIM = (100, 100) # the displayed video stream screen dimention 
+SKIP_FRAME = 0      # the fixed skip frame
 frame_skip_rate = 0 # skip SKIP_FRAME frames every other frame
-SCALE_FACTOR = 2 # used to resize the captured frame for face detection for faster processing speed
+SCALE_FACTOR = 4 # used to resize the captured frame for face detection for faster processing speed
 face_cascade = cv2.CascadeClassifier("../classifier/haarcascade_frontalface_default.xml") #create a cascade classifier
 sideFace_cascade = cv2.CascadeClassifier('../classifier/haarcascade_profileface.xml')
 
+# Certainly simpler that a full argument parser. Will probably update later
 if len(sys.argv) == 2:
-    SCALE_FACTOR = float(sys.argv[1])
+	SCALE_FACTOR = float(sys.argv[1])
 elif len(sys.argv) >2:
-    logging.error("main.py ")
+	logging.error("main.py ")
 # dictionary mapping used to keep track of head rotation maps
 rotation_maps = {
-    "left": np.array([-30, 0, 30]),
-    "right": np.array([30, 0, -30]),
-    "middle": np.array([0, -30, 30]),
+	"left": np.array([-30, 0, 30]),
+	"right": np.array([30, 0, -30]),
+	"middle": np.array([0, -30, 30]),
 }
 
 def get_rotation_map(rotation):
-    """ Takes in an angle rotation, and returns an optimized rotation map """
-    if rotation > 0: return rotation_maps.get("right", None)
-    if rotation < 0: return rotation_maps.get("left", None)
-    if rotation == 0: return rotation_maps.get("middle", None)
+	""" Takes in an angle rotation, and returns an optimized rotation map """
+	if rotation > 0: return rotation_maps.get("right", None)
+	if rotation < 0: return rotation_maps.get("left", None)
+	if rotation == 0: return rotation_maps.get("middle", None)
 
 current_rotation_map = get_rotation_map(0) 
 
@@ -112,100 +129,105 @@ num_of_face_saved = 0
 
 
 while ret:
-    key = cv2.waitKey(1)
-    # exit on 'q' 'esc' 'Q'
-    if key in [27, ord('Q'), ord('q')]: 
-        break
-    # resize the captured frame for face detection to increase processing speed
-    resized_frame = cv2.resize(frame, frame_scale)
+	key = cv2.waitKey(1)
+	# exit on 'q' 'esc' 'Q'
+	if key in [27, ord('Q'), ord('q')]: 
+		break
+	# resize the captured frame for face detection to increase processing speed
+	resized_frame = cv2.resize(frame, frame_scale)
 
-    processed_frame = resized_frame
-    # Skip a frame if the no face was found last frame
+	processed_frame = resized_frame
+	# Skip a frame if the no face was found last frame
 
-    if frame_skip_rate == 0:
-        faceFound = False
-        for rotation in current_rotation_map:
+	if frame_skip_rate == 0:
+		faceFound = False
+		for rotation in current_rotation_map:
 
-            rotated_frame = ndimage.rotate(resized_frame, rotation)
+			rotated_frame = ndimage.rotate(resized_frame, rotation)
 
-            gray = cv2.cvtColor(rotated_frame, cv2.COLOR_BGR2GRAY)
+			gray = cv2.cvtColor(rotated_frame, cv2.COLOR_BGR2GRAY)
 
-            # return tuple is empty, ndarray if detected face
-            faces = face_cascade.detectMultiScale(
-                gray,
-                scaleFactor=1.3,
-                minNeighbors=5,
-                minSize=(30, 30),
-                flags=cv2.CASCADE_SCALE_IMAGE
-            ) 
+			# return tuple is empty, ndarray if detected face
+			faces = face_cascade.detectMultiScale(
+				gray,
+				scaleFactor=1.3,
+				minNeighbors=5,
+				minSize=(30, 30),
+				flags=cv2.CASCADE_SCALE_IMAGE
+			) 
 
-            # If frontal face detector failed, use profileface detector
-            faces = faces if len(faces) else sideFace_cascade.detectMultiScale(                
-                gray,
-                scaleFactor=1.3,
-                minNeighbors=5,
-                minSize=(30, 30),
-                flags=cv2.CASCADE_SCALE_IMAGE
-            )
+			# If frontal face detector failed, use profileface detector
+			faces = faces if len(faces) else sideFace_cascade.detectMultiScale(                
+				gray,
+				scaleFactor=1.3,
+				minNeighbors=5,
+				minSize=(30, 30),
+				flags=cv2.CASCADE_SCALE_IMAGE
+			)
 
-            # for f in faces:
-            #     x, y, w, h = [ v*SCALE_FACTOR for v in f ] # scale the bounding box back to original frame size
-            #     cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0))
-            #     cv2.putText(frame, "DumbAss", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,255,0))
+			# for f in faces:
+			# 	x, y, w, h = [ v*SCALE_FACTOR for v in f ] # scale the bounding box back to original frame size
+			# 	cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0))
+			# 	cv2.putText(frame, "DumbAss", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,255,0))
 
-            if len(faces):
-                for f in faces:
-                    # Crop out the face
-                    x, y, w, h = [ v for v in f ] # scale the bounding box back to original frame size
-                    cropped_face = rotated_frame[y: y + h, x: x + w]   # img[y: y + h, x: x + w]
-                    cropped_face = cv2.resize(cropped_face, DISPLAY_FACE_DIM, interpolation = cv2.INTER_AREA)
+			if len(faces):
+				for f in faces:
+					# Crop out the face
+					x, y, w, h = [ v for v in f ] # scale the bounding box back to original frame size
+					cropped_face = rotated_frame[y: y + h, x: x + w]   # img[y: y + h, x: x + w]
+					cropped_face = cv2.resize(cropped_face, DISPLAY_FACE_DIM, interpolation = cv2.INTER_AREA)
+					integrated_red=np.roll(integrated_red,1)
+					integrated_blue=np.roll(integrated_blue,1)
+					integrated_green=np.roll(integrated_green,1)
+					integrated_red[0]=cropped_face[:,:,0].sum()*3-cropped_face[:,:,2].sum()-cropped_face[:,:,1].sum()
+					integrated_blue[0]=cropped_face[:,:,1].sum()*3-cropped_face[:,:,0].sum()-cropped_face[:,:,2].sum()
+					integrated_green[0]=cropped_face[:,:,2].sum()*3-cropped_face[:,:,1].sum()-cropped_face[:,:,0].sum()
+					divisor=integrated_blue.sum()*integrated_green.sum()*integrated_red.sum()
+					normalized_red=np.true_divide(integrated_red,divisor)
+					normalized_blue=np.true_divide(integrated_blue,divisor)
+					normalized_green=np.true_divide(integrated_green,divisor)
+					# pltq=np.append(np.fft.rfft(integrated_red),np.zeros(integrated_red.shape[0]/2-1))
+					pltq=normalized_red
+					pltq2=normalized_blue
+					pltq3=normalized_green
+					rad=np.mean(normalized_red)*1.1
+					plt.axis([0,1,0,rad])
+					line1.set_ydata(pltq)
+					line2.set_ydata(pltq2)
+					line3.set_ydata(pltq3)
+					# Name Prediction
+					face_to_predict = cv2.resize(cropped_face, FACE_DIM, interpolation = cv2.INTER_AREA)
+					face_to_predict = cv2.cvtColor(face_to_predict, cv2.COLOR_BGR2GRAY)
 
-                    # Name Prediction
-                    face_to_predict = cv2.resize(cropped_face, FACE_DIM, interpolation = cv2.INTER_AREA)
-                    face_to_predict = cv2.cvtColor(face_to_predict, cv2.COLOR_BGR2GRAY)
+					# Display frame
+					cv2.rectangle(rotated_frame, (x,y), (x+w,y+h), (0,255,0))
+				# rotate the frame back and trim the black paddings
+				processed_frame = ut.trim(ut.rotate_image(rotated_frame, rotation * (-1)), frame_scale)
 
-                    # Display frame
-                    cv2.rectangle(rotated_frame, (x,y), (x+w,y+h), (0,255,0))
-
-                # rotate the frame back and trim the black paddings
-                processed_frame = ut.trim(ut.rotate_image(rotated_frame, rotation * (-1)), frame_scale)
-
-                # reset the optmized rotation map
-                current_rotation_map = get_rotation_map(rotation)
-
-                faceFound = True
-
-
-                break
-
-        if faceFound: 
-            frame_skip_rate = 0
-            # print "Face Found"
-        else:
-            frame_skip_rate = SKIP_FRAME
-            # print "Face Not Found"
-
-    else:
-        frame_skip_rate -= 1
-        # print "Face Not Found"
-
-
-    # print "Frame dimension: ", processed_frame.shape
-  
-    cv2.putText(processed_frame, "Press ESC or 'q' to quit.", (5, 15),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
-    cv2.imshow("Real Time Facial Recognition", processed_frame)
-
-
-    # br()
-    if len(cropped_face):
-        cv2.imshow("Cropped Face", cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY))
-        # face_to_predict = cv2.resize(cropped_face, FACE_DIM, interpolation = cv2.INTER_AREA)
-        # face_to_predict = cv2.cvtColor(face_to_predict, cv2.COLOR_BGR2GRAY)
-        # name_to_display = svm.predict(clf, pca, face_to_predict, face_profile_names)
-    # get next frame
-    ret, frame = webcam.read()
-
-
+				# reset the optmized rotation map
+				current_rotation_map = get_rotation_map(rotation)
+				faceFound = True
+				break
+		if faceFound: 
+			frame_skip_rate = 0
+			# print "Face Found"
+		else:
+			frame_skip_rate = SKIP_FRAME
+			# print "Face Not Found"
+	else:
+		frame_skip_rate -= 1
+		# print "Face Not Found"
+	# print "Frame dimension: ", processed_frame.shape
+	if len(cropped_face):
+		cv2.imshow("Cropped Face", cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY))
+		# face_to_predict = cv2.resize(cropped_face, FACE_DIM, interpolation = cv2.INTER_AREA)
+		# face_to_predict = cv2.cvtColor(face_to_predict, cv2.COLOR_BGR2GRAY)
+		# name_to_display = svm.predict(clf, pca, face_to_predict, face_profile_names)
+	
+	cv2.putText(processed_frame, "Press ESC or 'q' to quit.", (5, 15),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
+	cv2.imshow("Real Time Facial Recognition", processed_frame)
+	# get next frame
+	ret, frame = webcam.read()
 webcam.release()
 cv2.destroyAllWindows()
