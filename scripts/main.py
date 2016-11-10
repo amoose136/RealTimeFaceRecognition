@@ -46,6 +46,7 @@ import cv2
 import os
 import numpy as np
 from scipy import ndimage
+from scipy.interpolate import interp1d
 from time import time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -91,9 +92,9 @@ clf, pca = svm.build_SVC(face_profile_data, face_profile_name_index, FACE_DIM)
 
 ###############################################################################
 # Facial Recognition In Live Tracking
-DISPLAY_FACE_DIM = (100, 100) # the displayed video stream screen dimention 
-SKIP_FRAME = 0      # the fixed skip frame
-frame_skip_rate = 0 # skip SKIP_FRAME frames every other frame
+DISPLAY_FACE_DIM = (200, 200) # the displayed video stream screen dimention 
+SKIP_FRAME = 1      # the fixed skip frame
+frame_skip_rate = 1 # skip SKIP_FRAME frames every other frame
 SCALE_FACTOR = 4 # used to resize the captured frame for face detection for faster processing speed
 face_cascade = cv2.CascadeClassifier("../classifier/haarcascade_frontalface_default.xml") #create a cascade classifier
 sideFace_cascade = cv2.CascadeClassifier('../classifier/haarcascade_profileface.xml')
@@ -109,6 +110,55 @@ rotation_maps = {
 	"right": np.array([30, 0, -30]),
 	"middle": np.array([0, -30, 30]),
 }
+def smooth(x,window_len=9,window='hanning'):
+    """smooth the data using a window with requested size.
+
+    This method is based on the convolution of a scaled window with the signal.
+    The signal is prepared by introducing reflected copies of the signal
+    (with the window size) in both ends so that transient parts are minimized
+    in the begining and end part of the output signal.
+
+    input:
+        x: the input signal
+        window_len: the dimension of the smoothing window; should be an odd integer
+        window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
+            flat window will produce a moving average smoothing.
+
+    output:
+        the smoothed signal
+
+    example:
+
+    t=linspace(-2,2,0.1)
+    x=sin(t)+randn(len(t))*0.1
+    y=smooth(x)
+    """
+
+    if x.ndim != 1:
+        raise ValueError, "smooth only accepts 1 dimension arrays."
+
+    if x.size < window_len:
+        raise ValueError, "Input vector needs to be bigger than window size."
+
+
+    if window_len<3:
+        return x
+
+
+    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+        raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+
+
+    s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
+    #print(len(s))
+    if window == 'flat': #moving average
+        w=np.ones(window_len,'d')
+    else:
+        w=eval('np.'+window+'(window_len)')
+
+    y=np.convolve(w/w.sum(),s,mode='valid')
+    return y[(window_len/2):-(window_len/2)]
+
 
 def get_rotation_map(rotation):
 	""" Takes in an angle rotation, and returns an optimized rotation map """
@@ -138,21 +188,23 @@ while ret:
 
 	processed_frame = resized_frame
 	# Skip a frame if the no face was found last frame
-
+	xo=0
+	yo=0
+	wo=0
+	ho=0
 	if frame_skip_rate == 0:
 		faceFound = False
 		for rotation in current_rotation_map:
 
 			rotated_frame = ndimage.rotate(resized_frame, rotation)
-
 			gray = cv2.cvtColor(rotated_frame, cv2.COLOR_BGR2GRAY)
 
 			# return tuple is empty, ndarray if detected face
 			faces = face_cascade.detectMultiScale(
 				gray,
 				scaleFactor=1.3,
-				minNeighbors=5,
-				minSize=(30, 30),
+				minNeighbors=3,
+				minSize=(25, 25),
 				flags=cv2.CASCADE_SCALE_IMAGE
 			) 
 
@@ -160,8 +212,8 @@ while ret:
 			faces = faces if len(faces) else sideFace_cascade.detectMultiScale(                
 				gray,
 				scaleFactor=1.3,
-				minNeighbors=5,
-				minSize=(30, 30),
+				minNeighbors=3,
+				minSize=(25, 25),
 				flags=cv2.CASCADE_SCALE_IMAGE
 			)
 
@@ -174,33 +226,46 @@ while ret:
 				for f in faces:
 					# Crop out the face
 					x, y, w, h = [ v for v in f ] # scale the bounding box back to original frame size
-					cropped_face = rotated_frame[y: y + h, x: x + w]   # img[y: y + h, x: x + w]
+					cropped_face = rotated_frame[y: y + int(.8*h+.2*ho), x: x + int(.8*w+.2*wo)]   # img[y: y + h, x: x + w]
 					cropped_face = cv2.resize(cropped_face, DISPLAY_FACE_DIM, interpolation = cv2.INTER_AREA)
 					integrated_red=np.roll(integrated_red,1)
 					integrated_blue=np.roll(integrated_blue,1)
 					integrated_green=np.roll(integrated_green,1)
-					integrated_red[0]=cropped_face[:,:,0].sum()*3-cropped_face[:,:,2].sum()-cropped_face[:,:,1].sum()
-					integrated_blue[0]=cropped_face[:,:,1].sum()*3-cropped_face[:,:,0].sum()-cropped_face[:,:,2].sum()
-					integrated_green[0]=cropped_face[:,:,2].sum()*3-cropped_face[:,:,1].sum()-cropped_face[:,:,0].sum()
-					divisor=integrated_blue.sum()*integrated_green.sum()*integrated_red.sum()
-					normalized_red=np.true_divide(integrated_red,divisor)
-					normalized_blue=np.true_divide(integrated_blue,divisor)
-					normalized_green=np.true_divide(integrated_green,divisor)
+					integrated_red[0]=np.median(cropped_face[:,:,2])
+					integrated_blue[0]=np.median(cropped_face[:,:,1])
+					integrated_green[0]=np.median(cropped_face[:,:,0])
+					normalized_red=np.true_divide(integrated_red,np.sqrt(integrated_green*integrated_blue))
+					normalized_blue=np.true_divide(integrated_blue,np.sqrt(integrated_green*integrated_red))
+					normalized_green=np.true_divide(integrated_green,np.sqrt(integrated_red*integrated_blue))
+					# brightness=smooth(np.abs(normalized_green*normalized_red*normalized_blue))
+					# print(brightness,21)
 					# pltq=np.append(np.fft.rfft(integrated_red),np.zeros(integrated_red.shape[0]/2-1))
-					pltq=normalized_red
-					pltq2=normalized_blue
-					pltq3=normalized_green
-					rad=np.mean(normalized_red)*1.1
-					plt.axis([0,1,0,rad])
+					# renormalized_red=normalized_red-brightness
+					# renormalized_blue=normalized_blue-brightness
+					# renormalized_green=normalized_green-brightness
+					pltq=integrated_red
+					pltq=integrated_red-smooth(pltq)
+					# pltq=smooth(renormalized_red-(np.sqrt(np.abs(renormalized_green*renormalized_blue))),5)
+					pltq2=smooth(pltq)
+					pltq3=smooth(np.abs(np.fft.rfft(pltq2)),5)
+					pltq3=np.append(pltq3,np.zeros(integrated_red.shape[0]-pltq3.shape[0]))/5
+					
+					# pltq3=normalized_green
+					center=np.mean(np.abs(pltq))
+					rad=np.max(np.abs(pltq))-np.min(np.abs(pltq))
+					plt.axis([0,1,center-rad,center+rad])
 					line1.set_ydata(pltq)
 					line2.set_ydata(pltq2)
 					line3.set_ydata(pltq3)
 					# Name Prediction
 					face_to_predict = cv2.resize(cropped_face, FACE_DIM, interpolation = cv2.INTER_AREA)
 					face_to_predict = cv2.cvtColor(face_to_predict, cv2.COLOR_BGR2GRAY)
-
+					xo=x
+					yo=y
+					wo=w
+					ho=h
 					# Display frame
-					cv2.rectangle(rotated_frame, (x,y), (x+w,y+h), (0,255,0))
+					cv2.rectangle(rotated_frame, (x,y), (x+int(.8*w+.2*wo),y+int(.8*h+.2*ho)), (0,255,0))
 				# rotate the frame back and trim the black paddings
 				processed_frame = ut.trim(ut.rotate_image(rotated_frame, rotation * (-1)), frame_scale)
 
