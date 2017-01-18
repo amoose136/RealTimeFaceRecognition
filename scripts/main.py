@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ 
 ====================================================
 		Real Time Heart Rate Detector 
@@ -240,10 +241,7 @@ while ret:
 					# brightness=smooth(np.abs(normalized_green*normalized_red*normalized_blue))
 					# print(brightness,21)
 					# pltq=np.append(np.fft.rfft(integrated_red),np.zeros(integrated_red.shape[0]/2-1))
-					# renormalized_red=normalized_red-brightness
-					# renormalized_blue=normalized_blue-brightness
-					# renormalized_green=normalized_green-brightness
-					pltq=integrated_blue
+					pltq=integrated_red
 					pltq=integrated_red-smooth(pltq)
 					# pltq=smooth(renormalized_red-(np.sqrt(np.abs(renormalized_green*renormalized_blue))),5)
 					pltq2=smooth(pltq)
