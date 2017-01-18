@@ -243,7 +243,7 @@ while ret:
 					# renormalized_red=normalized_red-brightness
 					# renormalized_blue=normalized_blue-brightness
 					# renormalized_green=normalized_green-brightness
-					pltq=integrated_red
+					pltq=integrated_blue
 					pltq=integrated_red-smooth(pltq)
 					# pltq=smooth(renormalized_red-(np.sqrt(np.abs(renormalized_green*renormalized_blue))),5)
 					pltq2=smooth(pltq)
