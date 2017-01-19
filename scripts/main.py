@@ -255,7 +255,6 @@ while ret:
 					line1.set_ydata(pltq)
 					line2.set_ydata(pltq2)
 					line3.set_ydata(pltq3)
-					# Name Prediction
 					face_to_predict = cv2.resize(cropped_face, FACE_DIM, interpolation = cv2.INTER_AREA)
 					face_to_predict = cv2.cvtColor(face_to_predict, cv2.COLOR_BGR2GRAY)
 					xo=x
@@ -273,11 +272,9 @@ while ret:
 				break
 		if faceFound: 
 			frame_skip_rate = 0
-			# print "Face Found"
 			# code here for box
 		else:
 			frame_skip_rate = SKIP_FRAME
-			# print "Face Not Found"
 	else:
 		frame_skip_rate -= 1
 		# print "Face Not Found"
