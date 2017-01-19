@@ -274,6 +274,7 @@ while ret:
 		if faceFound: 
 			frame_skip_rate = 0
 			# print "Face Found"
+			# code here for box
 		else:
 			frame_skip_rate = SKIP_FRAME
 			# print "Face Not Found"
