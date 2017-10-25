@@ -42,7 +42,7 @@ Chenxing's code does the face detection python implementation and provided the H
 Written by Amos Manneschmidt
 
 """
-
+from __future__ import print_function
 import cv2
 import os
 import numpy as np
@@ -85,7 +85,7 @@ FACE_DIM = (50,50) # h = 50, w = 50
 # Load training data from face_profiles/
 face_profile_data, face_profile_name_index, face_profile_names  = ut.load_training_data("../face_profiles/")
 
-print "\n", face_profile_name_index.shape[0], " samples from ", len(face_profile_names), " people are loaded"
+print("\n", face_profile_name_index.shape[0], " samples from ", len(face_profile_names), " people are loaded")
 
 # Build the classifier
 clf, pca = svm.build_SVC(face_profile_data, face_profile_name_index, FACE_DIM)
@@ -99,7 +99,6 @@ frame_skip_rate = 1 # skip SKIP_FRAME frames every other frame
 SCALE_FACTOR = 4 # used to resize the captured frame for face detection for faster processing speed
 face_cascade = cv2.CascadeClassifier("../classifier/haarcascade_frontalface_default.xml") #create a cascade classifier
 sideFace_cascade = cv2.CascadeClassifier('../classifier/haarcascade_profileface.xml')
-
 # Certainly simpler that a full argument parser. Will probably update later
 if len(sys.argv) == 2:
 	SCALE_FACTOR = float(sys.argv[1])
@@ -136,10 +135,10 @@ def smooth(x,window_len=9,window='hanning'):
     """
 
     if x.ndim != 1:
-        raise ValueError, "smooth only accepts 1 dimension arrays."
+        raise ValueError("smooth only accepts 1 dimension arrays.")
 
     if x.size < window_len:
-        raise ValueError, "Input vector needs to be bigger than window size."
+        raise ValueError("Input vector needs to be bigger than window size.")
 
 
     if window_len<3:
@@ -147,7 +146,7 @@ def smooth(x,window_len=9,window='hanning'):
 
 
     if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-        raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
 
 
     s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
@@ -169,21 +168,21 @@ def get_rotation_map(rotation):
 
 current_rotation_map = get_rotation_map(0) 
 
+webcam=cv2.VideoCapture(0)
+ret,frame = webcam.read() # get first frame
 
-webcam = cv2.VideoCapture(0)
-
-ret, frame = webcam.read() # get first frame
 frame_scale = (frame.shape[1]/SCALE_FACTOR,frame.shape[0]/SCALE_FACTOR)  # (y, x)
-
 cropped_face = []
 num_of_face_saved = 0
+# frame_scale=(640/4,480/4)
 
-
+ret=True
 while ret:
-	key = cv2.waitKey(1)
-	# exit on 'q' 'esc' 'Q'
-	if key in [27, ord('Q'), ord('q')]: 
-		break
+	
+	# key = cv2.waitKey(1)
+	# exit on 'q' 'esc' 'Q's
+	# if key in [27, ord('Q'), ord('q')]: 
+	# 	break
 	# resize the captured frame for face detection to increase processing speed
 	resized_frame = cv2.resize(frame, frame_scale)
 
