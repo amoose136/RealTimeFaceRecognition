@@ -163,7 +163,7 @@ def smooth(x,window_len=9,window='hanning'):
     else:
         w=eval('np.'+window+'(window_len)')
 
-    y=np.convolve(w/w.sum(),s,mode='valid')
+    y=np.convolve(w//w.sum(),s,mode='valid')
     return y[(window_len/2):-(window_len/2)]
 
 
@@ -177,7 +177,8 @@ current_rotation_map = get_rotation_map(0)
 
 webcam=cv2.VideoCapture(0)
 ret,frame = webcam.read() # get first frame
-
+webcam=cv2.VideoCapture(0) #Some BS means I need to do this twice
+ret,frame = webcam.read() 
 frame_scale = (frame.shape[1]//SCALE_FACTOR,frame.shape[0]//SCALE_FACTOR)  # (y, x) // is to use floor division leftover from py2
 cropped_face = []
 num_of_face_saved = 0
@@ -209,7 +210,7 @@ while ret:
 			# return tuple is empty, ndarray if detected face
 			faces = face_cascade.detectMultiScale(
 				gray,
-				scaleFactor=1.3,
+				scaleFactor=1.1,
 				minNeighbors=3,
 				minSize=(25, 25),
 				flags=cv2.CASCADE_SCALE_IMAGE
@@ -218,31 +219,33 @@ while ret:
 			# If frontal face detector failed, use profileface detector
 			faces = faces if len(faces) else sideFace_cascade.detectMultiScale(                
 				gray,
-				scaleFactor=1.3,
+				scaleFactor=1.1,
 				minNeighbors=3,
 				minSize=(25, 25),
 				flags=cv2.CASCADE_SCALE_IMAGE
 			)
-			for f in faces:
-				x, y, w, h = [ int(v*SCALE_FACTOR) for v in f ] # scale the bounding box back to original frame size
-				cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0))
-				cv2.putText(frame, "DumbAss", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,255,0))
+			# for f in faces:
+				# x, y, w, h = [ v*SCALE_FACTOR for v in f ] # scale the bounding box back to original frame size
+				# br()
+				# cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0))
+				# cv2.putText(frame, "100% HUMAN", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,255,0))
 			if len(faces):
 				for f in faces:
 					# Crop out the face
 					x, y, w, h = [ v for v in f ] # scale the bounding box back to original frame size
-					cropped_face = rotated_frame[y: y + int(.8*h+.2*ho), x: x + int(.8*w+.2*wo)]   # img[y: y + h, x: x + w]
+					# br()
+					cropped_face = rotated_frame[y: y + h, x: x +w]   # img[y: y + h, x: x + w]
 					cropped_face = cv2.resize(cropped_face, DISPLAY_FACE_DIM, interpolation = cv2.INTER_AREA)
 					integrated_red=np.roll(integrated_red,1)
-					integrated_blue=np.roll(integrated_blue,1)
-					integrated_green=np.roll(integrated_green,1)
+					# integrated_blue=np.roll(integrated_blue,1)
+					# integrated_green=np.roll(integrated_green,1)
 					integrated_red[0]=np.median(cropped_face[:,:,2])
-					integrated_blue[0]=np.median(cropped_face[:,:,1])
-					integrated_green[0]=np.median(cropped_face[:,:,0])
+					# integrated_blue[0]=np.median(cropped_face[:,:,1])
+					# integrated_green[0]=np.median(cropped_face[:,:,0])
 					normalized_red=np.true_divide(integrated_red,np.sqrt(integrated_green*integrated_blue))
-					normalized_blue=np.true_divide(integrated_blue,np.sqrt(integrated_green*integrated_red))
-					normalized_green=np.true_divide(integrated_green,np.sqrt(integrated_red*integrated_blue))
-					# brightness=smooth(np.abs(normalized_green*normalized_red*normalized_blue))
+					# normalized_blue=np.true_divide(integrated_blue,np.sqrt(integrated_green*integrated_red))
+					# normalized_green=np.true_divide(integrated_green,np.sqrt(integrated_red*integrated_blue))
+					# brightness=smooqth(np.abs(normalized_green*normalized_red*normalized_blue))
 					# print(brightness,21)
 					# pltq=np.append(np.fft.rfft(integrated_red),np.zeros(integrated_red.shape[0]/2-1))
 					pltq=integrated_red
@@ -257,7 +260,7 @@ while ret:
 					# pltq3=normalized_green
 					center=np.mean(np.abs(pltq))
 					rad=np.max(np.abs(pltq))-np.min(np.abs(pltq))
-					plt.axis([0,1,center-rad,center+rad])
+					# plt.axis([0,1,center-rad,center+rad])
 					line1.set_ydata(pltq)
 					# line2.set_ydata(pltq2)
 					# line3.set_ydata(pltq3)
@@ -283,9 +286,9 @@ while ret:
 	else:
 		frame_skip_rate -= 1
 		print ("Face Not Found")
-	print("Frame dimension: ", processed_frame.shape)
-	# if len(cropped_face):
-		# cv2.imshow("Cropped Face", cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY))
+	# print("Frame dimension: ", processed_frame.shape)
+	if len(cropped_face):
+		cv2.imshow("Cropped Face", cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY))
 		# plt.imshow("Cropped Face", cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY))
 
 		# face_to_predict = cv2.resize(cropped_face, FACE_DIM, interpolation = cv2.INTER_AREA)
