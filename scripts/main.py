@@ -42,13 +42,20 @@ Chenxing's code does the face detection python implementation and provided the H
 Written by Amos Manneschmidt
 
 """
-from __future__ import print_function
+from __future__ import print_function, division
 import cv2
 import os
 import numpy as np
 from scipy import ndimage
 from scipy.interpolate import interp1d
 from time import time
+##### Fix some BS problems with pyplot and agg backend
+import matplotlib
+try: 
+	matplotlib.use('MacOSX')
+except ValueError:
+	matplotlib.use('Qt5Agg') 
+###
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.lines import Line2D
@@ -79,7 +86,7 @@ line2, = ax.plot(x, y, 'b-')
 line3, = ax.plot(x, y, 'g-')# Returns a tuple of line objects, thus the comma
 # for phase in np.linspace(0, 10*np.pi, 500):
 	# line1.set_ydata(np.sin(x + phase))
-fig.canvas.draw()
+# fig.canvas.draw()
 
 FACE_DIM = (50,50) # h = 50, w = 50
 # Load training data from face_profiles/
@@ -93,7 +100,7 @@ clf, pca = svm.build_SVC(face_profile_data, face_profile_name_index, FACE_DIM)
 
 ###############################################################################
 # Facial Recognition In Live Tracking
-DISPLAY_FACE_DIM = (200, 200) # the displayed video stream screen dimention 
+DISPLAY_FACE_DIM = (200, 200) # the displayed video stream screen dimension 
 SKIP_FRAME = 1      # the fixed skip frame
 frame_skip_rate = 1 # skip SKIP_FRAME frames every other frame
 SCALE_FACTOR = 4 # used to resize the captured frame for face detection for faster processing speed
@@ -171,7 +178,7 @@ current_rotation_map = get_rotation_map(0)
 webcam=cv2.VideoCapture(0)
 ret,frame = webcam.read() # get first frame
 
-frame_scale = (frame.shape[1]/SCALE_FACTOR,frame.shape[0]/SCALE_FACTOR)  # (y, x)
+frame_scale = (frame.shape[1]//SCALE_FACTOR,frame.shape[0]//SCALE_FACTOR)  # (y, x) // is to use floor division leftover from py2
 cropped_face = []
 num_of_face_saved = 0
 # frame_scale=(640/4,480/4)
@@ -179,10 +186,10 @@ num_of_face_saved = 0
 ret=True
 while ret:
 	
-	# key = cv2.waitKey(1)
+	key = cv2.waitKey(1)
 	# exit on 'q' 'esc' 'Q's
-	# if key in [27, ord('Q'), ord('q')]: 
-	# 	break
+	if key in [27, ord('Q'), ord('q')]: 
+		break
 	# resize the captured frame for face detection to increase processing speed
 	resized_frame = cv2.resize(frame, frame_scale)
 
@@ -216,12 +223,10 @@ while ret:
 				minSize=(25, 25),
 				flags=cv2.CASCADE_SCALE_IMAGE
 			)
-
-			# for f in faces:
-			# 	x, y, w, h = [ v*SCALE_FACTOR for v in f ] # scale the bounding box back to original frame size
-			# 	cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0))
-			# 	cv2.putText(frame, "DumbAss", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,255,0))
-
+			for f in faces:
+				x, y, w, h = [ int(v*SCALE_FACTOR) for v in f ] # scale the bounding box back to original frame size
+				cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0))
+				cv2.putText(frame, "DumbAss", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,255,0))
 			if len(faces):
 				for f in faces:
 					# Crop out the face
@@ -241,10 +246,12 @@ while ret:
 					# print(brightness,21)
 					# pltq=np.append(np.fft.rfft(integrated_red),np.zeros(integrated_red.shape[0]/2-1))
 					pltq=integrated_red
-					pltq=integrated_red-smooth(pltq)
+					# pltq=integrated_red-smooth(pltq)
 					# pltq=smooth(renormalized_red-(np.sqrt(np.abs(renormalized_green*renormalized_blue))),5)
-					pltq2=smooth(pltq)
-					pltq3=smooth(np.abs(np.fft.rfft(pltq2)),5)
+					# pltq2=smooth(pltq)
+					# pltq3=smooth(np.abs(np.fft.rfft(pltq2)),5)
+					pltq3=pltq
+					pltq2=pltq
 					pltq3=np.append(pltq3,np.zeros(integrated_red.shape[0]-pltq3.shape[0]))/5
 					
 					# pltq3=normalized_green
@@ -252,8 +259,8 @@ while ret:
 					rad=np.max(np.abs(pltq))-np.min(np.abs(pltq))
 					plt.axis([0,1,center-rad,center+rad])
 					line1.set_ydata(pltq)
-					line2.set_ydata(pltq2)
-					line3.set_ydata(pltq3)
+					# line2.set_ydata(pltq2)
+					# line3.set_ydata(pltq3)
 					face_to_predict = cv2.resize(cropped_face, FACE_DIM, interpolation = cv2.INTER_AREA)
 					face_to_predict = cv2.cvtColor(face_to_predict, cv2.COLOR_BGR2GRAY)
 					xo=x
@@ -264,7 +271,6 @@ while ret:
 					cv2.rectangle(rotated_frame, (x,y), (x+int(.8*w+.2*wo),y+int(.8*h+.2*ho)), (0,255,0))
 				# rotate the frame back and trim the black paddings
 				processed_frame = ut.trim(ut.rotate_image(rotated_frame, rotation * (-1)), frame_scale)
-
 				# reset the optmized rotation map
 				current_rotation_map = get_rotation_map(rotation)
 				faceFound = True
@@ -276,14 +282,15 @@ while ret:
 			frame_skip_rate = SKIP_FRAME
 	else:
 		frame_skip_rate -= 1
-		# print "Face Not Found"
-	# print "Frame dimension: ", processed_frame.shape
-	if len(cropped_face):
-		cv2.imshow("Cropped Face", cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY))
+		print ("Face Not Found")
+	print("Frame dimension: ", processed_frame.shape)
+	# if len(cropped_face):
+		# cv2.imshow("Cropped Face", cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY))
+		# plt.imshow("Cropped Face", cv2.cvtColor(cropped_face, cv2.COLOR_BGR2GRAY))
+
 		# face_to_predict = cv2.resize(cropped_face, FACE_DIM, interpolation = cv2.INTER_AREA)
 		# face_to_predict = cv2.cvtColor(face_to_predict, cv2.COLOR_BGR2GRAY)
 		# name_to_display = svm.predict(clf, pca, face_to_predict, face_profile_names)
-	
 	cv2.putText(processed_frame, "Press ESC or 'q' to quit.", (5, 15),
 			cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
 	cv2.imshow("Real Time Facial Recognition", processed_frame)

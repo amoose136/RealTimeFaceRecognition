@@ -6,7 +6,7 @@ This file is part of Cogs 109 Project.
 Summary: Utilties used for facial tracking in OpenCV 
 
 """
-
+from __future__ import print_function
 
 import cv2
 import numpy as np
@@ -84,7 +84,7 @@ def delete_empty_profile(face_profile_directory):
                     index += 1
             if index == 0 : 
                 shutil.rmtree(face_profile)
-                print "\nDeleted ", face_profile, " because it contains no images"
+                print("\nDeleted ", face_profile, " because it contains no images")
             if index < 2 : 
                 logging.error("\nFace profile " + str(face_profile) + " contains too little images (At least 2 images are needed)")
 
@@ -124,15 +124,15 @@ def load_training_data(face_profile_directory):
     X1, y1 = read_images_from_single_face_profile(first_data_path, 0)
     X_data = X1   
     Y_data = y1   
-    print "Loading Database: "
-    print 0, "    ",X1.shape[0]," images are loaded from:", first_data_path
+    print("Loading Database: ")
+    print(0, "    ",X1.shape[0]," images are loaded from:", first_data_path)
     for i in range(1, len(face_profile_names)):
         directory_name = str(face_profile_names[i])
         directory_path = os.path.join(face_profile_directory, directory_name)
         tempX, tempY = read_images_from_single_face_profile(directory_path, i)
         X_data = np.concatenate((X_data, tempX), axis=0)
         Y_data = np.append(Y_data, tempY)
-        print i, "    ",tempX.shape[0]," images are loaded from:", directory_path
+        print(i, "    ",tempX.shape[0]," images are loaded from:", directory_path)
 
     return X_data, Y_data, face_profile_names
 
@@ -209,8 +209,8 @@ def clean_directory(face_profile):
             if os.path.isfile(file_path):
                 os.unlink(file_path)
             #elif os.path.isdir(file_path): shutil.rmtree(file_path)
-        except Exception, e:
-            print e
+        except Exception as e:
+            print(e)
 
 
 def create_directory(face_profile):
@@ -224,11 +224,11 @@ def create_directory(face_profile):
 
     """
     try:
-        print "Making directory"
+        print("Making directory")
         os.makedirs(face_profile)
     except OSError as exception:
         if exception.errno != errno.EEXIST:
-            print "The specified face profile already existed, it will be override"
+            print("The specified face profile already existed, it will be override")
             raise
 
 def create_profile_in_database(face_profile_name, database_path="../face_profiles/", clean_directory=False):

@@ -1,6 +1,8 @@
 #OS junk files
 [Tt]humbs.db
 *.DS_Store
+#compiled python
+*.pyc
 
 #Visual Studio files
 *.[Oo]bj
@@ -22,6 +24,7 @@
 *.lib
 *.sbr
 *.sdf
+
 ipch/
 obj/
 [Bb]in

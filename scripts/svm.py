@@ -16,7 +16,7 @@ import warnings
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
-    from sklearn.cross_validation import train_test_split
+    from sklearn.model_selection import train_test_split
 
 from sklearn.datasets import fetch_lfw_people
 from sklearn.grid_search import GridSearchCV
